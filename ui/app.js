@@ -24,9 +24,9 @@ const state = {
 
 const strings = {
   zh: {
-    endpoint: "环境", reload: "刷新", viewContainers: "容器", viewStacks: "堆栈",
+    endpoint: "环境", reload: "刷新", viewContainers: "容器", viewStacks: "堆栈 / 命名空间",
     onlyDb: "只看数据库", filterPlaceholder: "过滤容器名或镜像",
-    containers: "容器", stacks: "堆栈",
+    containers: "容器", stacks: "堆栈 / 命名空间",
     tabOverview: "概览", tabLogs: "日志", tabInspect: "检查", tabStats: "统计", tabConnect: "连接参数",
     autoRefresh: "自动刷新日志", wrapLines: "自动换行", showTimestamps: "显示时间戳",
     range: "获取范围", rangeAll: "全部日志", range1h: "最近 1 小时", range24h: "最近 24 小时", range7d: "最近 7 天",
@@ -48,9 +48,9 @@ const strings = {
     statsReceived: "接收", statsSent: "发送", statsRead: "读", statsWrite: "写", statsSampledAt: "采样时间",
   },
   en: {
-    endpoint: "Environment", reload: "Reload", viewContainers: "Containers", viewStacks: "Stacks",
+    endpoint: "Environment", reload: "Reload", viewContainers: "Containers", viewStacks: "Stacks / Namespaces",
     onlyDb: "Databases only", filterPlaceholder: "Filter by name or image",
-    containers: "Containers", stacks: "Stacks",
+    containers: "Containers", stacks: "Stacks / Namespaces",
     tabOverview: "Overview", tabLogs: "Logs", tabInspect: "Inspect", tabStats: "Stats", tabConnect: "Connection",
     autoRefresh: "Auto refresh logs", wrapLines: "Wrap lines", showTimestamps: "Show timestamps",
     range: "Range", rangeAll: "All logs", range1h: "Last hour", range24h: "Last 24 hours", range7d: "Last 7 days",
@@ -369,7 +369,8 @@ async function loadEndpoints() {
     state.endpoints.forEach((endpoint) => {
       const option = document.createElement("option");
       option.value = String(endpoint.id);
-      option.textContent = endpoint.name + (endpoint.status === 1 ? "" : " (offline)");
+      const kind = endpoint.type === 5 ? " (k8s)" : "";
+      option.textContent = endpoint.name + kind + (endpoint.status === 1 ? "" : " (offline)");
       select.appendChild(option);
     });
     const preferred = state.endpoints.find((endpoint) => endpoint.status === 1) || state.endpoints[0];
@@ -454,6 +455,11 @@ function renderInspect(detail) {
   }
   appendRow(panel, "Id", detail.id);
   appendRow(panel, "Name", detail.name);
+  if (detail.namespace) appendRow(panel, "Namespace", detail.namespace);
+  if (detail.pod) appendRow(panel, "Pod", detail.pod);
+  if (detail.container) appendRow(panel, "Container", detail.container);
+  if (detail.node) appendRow(panel, "Node", detail.node);
+  if (detail.restartCount !== undefined) appendRow(panel, "Restarts", detail.restartCount);
   appendRow(panel, "Image", detail.image);
   appendRow(panel, "State", detail.state + (detail.running ? " (" + text.running + ")" : ""));
   appendRow(panel, text.restartPolicy, detail.restartPolicy);
