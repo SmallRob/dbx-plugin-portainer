@@ -28,7 +28,7 @@ import (
 
 const (
 	pluginID        = "io.github.summery-yk.portainer"
-	pluginVersion   = "0.2.1"
+	pluginVersion   = "0.2.3"
 	requestTimeout  = 25 * time.Second
 	maxResponseBody = 8 << 20
 	maxLogBytes     = 512 << 10
@@ -96,6 +96,8 @@ func (p *plugin) Handle(_ dbxpluginsdk.RequestContext, method string, params jso
 		return p.handleLogs(values)
 	case "portainer/stacks":
 		return p.handleStacks(values)
+	case "portainer/namespaces":
+		return p.handleNamespaces(values)
 	case "portainer/stackContainers":
 		return p.handleStackContainers(values)
 	case "portainer/stats":
@@ -216,6 +218,7 @@ func (p *plugin) handleContainers(values map[string]any) (any, *dbxpluginsdk.Plu
 	if pluginError != nil {
 		return nil, pluginError
 	}
+	containers = applyNamespaceFilter(target, endpointID, containers, values)
 	return map[string]any{"items": containerItems(containers)}, nil
 }
 
@@ -327,6 +330,7 @@ func (p *plugin) handleDatabases(values map[string]any) (any, *dbxpluginsdk.Plug
 	if pluginError != nil {
 		return nil, pluginError
 	}
+	containers = applyNamespaceFilter(target, endpointID, containers, values)
 	kubernetes := isKubernetesEndpoint(target, endpointID)
 	items := []map[string]any{}
 	for _, container := range containers {
@@ -448,6 +452,7 @@ func (p *plugin) handleStacks(values map[string]any) (any, *dbxpluginsdk.PluginE
 	if pluginError != nil {
 		return nil, pluginError
 	}
+	containers = applyNamespaceFilter(target, endpointID, containers, values)
 	groups := map[string]*stackSummary{}
 	for _, container := range containers {
 		name := container.stackName()
@@ -491,6 +496,30 @@ func (p *plugin) handleStacks(values map[string]any) (any, *dbxpluginsdk.PluginE
 		})
 	}
 	return map[string]any{"items": items}, nil
+}
+
+// handleNamespaces exposes the Kubernetes-native counterpart of handleStacks.
+// Docker environments can still call it and receive the Compose grouping, but
+// the UI only uses this method for Type=5 endpoints.
+func (p *plugin) handleNamespaces(values map[string]any) (any, *dbxpluginsdk.PluginError) {
+	target, pluginError := p.pickSession(values)
+	if pluginError != nil {
+		return nil, pluginError
+	}
+	endpointID := toInt(values["endpointId"])
+	if endpointID == 0 {
+		return nil, dbxpluginsdk.NewError(-32602, "Missing endpointId")
+	}
+	result, pluginError := p.handleStacks(values)
+	if pluginError != nil {
+		return nil, pluginError
+	}
+	payload, _ := result.(map[string]any)
+	kind := "stacks"
+	if isKubernetesEndpoint(target, endpointID) {
+		kind = "namespaces"
+	}
+	return map[string]any{"kind": kind, "items": payload["items"]}, nil
 }
 
 // handleStackContainers lists the containers of a single Compose project.
@@ -932,6 +961,22 @@ func listContainers(target *session, endpointID int, values map[string]any) ([]d
 		return nil, pluginError
 	}
 	return decodeContainers(body)
+}
+
+// applyNamespaceFilter filters Kubernetes pod containers by namespace. Docker
+// environments ignore this parameter so the existing API stays unchanged.
+func applyNamespaceFilter(target *session, endpointID int, containers []dockerContainer, values map[string]any) []dockerContainer {
+	namespace := strings.TrimSpace(toStr(values["namespace"]))
+	if namespace == "" || !isKubernetesEndpoint(target, endpointID) {
+		return containers
+	}
+	filtered := make([]dockerContainer, 0, len(containers))
+	for _, container := range containers {
+		if container.stackName() == namespace {
+			filtered = append(filtered, container)
+		}
+	}
+	return filtered
 }
 
 // endpointType reads the Portainer endpoint type. A failure falls back to the
@@ -1435,6 +1480,9 @@ func (p *plugin) handleKubernetesLogs(target *session, endpointID int, container
 	query := url.Values{}
 	query.Set("container", containerName)
 	query.Set("tailLines", strconv.Itoa(tail))
+	if toBool(values["previous"]) {
+		query.Set("previous", "true")
+	}
 	if toBool(values["timestamps"]) {
 		query.Set("timestamps", "true")
 	}
@@ -1456,6 +1504,14 @@ func (p *plugin) handleKubernetesLogs(target *session, endpointID int, container
 	}
 	body, pluginError := target.get(kubernetesPodLogPath(endpointID, namespace, podName), query)
 	if pluginError != nil {
+		if toBool(values["previous"]) && strings.Contains(pluginError.Message, "HTTP 400") {
+			return map[string]any{
+				"text":      "Previous container logs are not available for this container.",
+				"bytes":     0,
+				"truncated": false,
+				"notice":    true,
+			}, nil
+		}
 		return nil, pluginError
 	}
 	text := string(body)

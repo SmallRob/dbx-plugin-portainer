@@ -8,7 +8,8 @@ DBX 是一个 20 MB 的跨平台数据库客户端，内置 90+ 种数据库驱�
 
 - **环境**：列出 Portainer 的全部 endpoint，含在线状态与类型；Docker 与 Kubernetes 环境自动识别
 - **Docker 堆栈视图**：按容器的 `com.docker.compose.project` 标签分组，同时覆盖 Portainer 托管的堆栈与外部部署的 Compose 项目，显示运行数 / 总数与服务数
-- **Kubernetes 命名空间视图**：Kubernetes 环境按 namespace 分组，Pod 内容器以 `pod/container` 展示，可直接查看日志与详情
+- **Kubernetes 命名空间视图**：Kubernetes 环境按 namespace 分组，Pod 内容器以 `pod/container` 展示；顶部 namespace 筛选器可快速聚焦单个命名空间
+- **K8s 专属日志选项**：支持读取「上一轮容器日志」，便于定位 CrashLoopBackOff / OOMKilled 等重启问题
 - **容器视图**：全量容器列表，支持按名称、镜像、服务名过滤，可只看数据库容器
 - **状态徽章**：Docker 取自状态行；Kubernetes 由 Pod/容器状态与 Ready 条件推导 `healthy`、`unhealthy`、`starting`、`running` 等
 - **数据库识别**：MySQL、MariaDB、Percona、TiDB、PostgreSQL（含 pgvector / Timescale）、Redis / Valkey、MongoDB、Elasticsearch / OpenSearch、ClickHouse、Neo4j、MinIO、SQL Server、Oracle、Kingbase、达梦、Nacos
@@ -102,7 +103,7 @@ Kubernetes 环境以 CCE / k3s / kubeadm 的 Portainer NodePort 为例：若 Ser
 
 令牌保存在 DBX 的 Secret Store 中，不会写入插件配置、日志或事件。
 
-插件同时支持 Portainer 的长期 access token（作为 `X-API-Key` 发送）与 `/api/auth` 签发的会话令牌（作为 `Bearer` 发送），按令牌形态自动选择。
+插件同时支持 Portainer 的长期 access token（作为 `X-API-Key` 发送）与 `/api/auth` 签发的会话令牌（作为 `Bearer` 发送），按令牌形态自动选择。工作台启动时会调用宿主的 `host.reopenConnection` 重建 sidecar 会话，因此 DBX 重启、插件重装或同一连接开多个标签页后，日志和详情不会因会话丢失而报错。
 
 ## 目录结构
 
@@ -141,6 +142,7 @@ Sidecar 暴露的方法：
 | `portainer/endpoints` | 环境列表 |
 | `portainer/containers` | 容器 / Pod 内容器列表（含 stack/namespace / service / health） |
 | `portainer/stacks` | Docker 按 Compose 项目、Kubernetes 按 namespace 分组 |
+| `portainer/namespaces` | Kubernetes namespace 列表（含容器数 / 运行数 / 健康状态） |
 | `portainer/stackContainers` | 单个堆栈或 namespace 的容器 |
 | `portainer/inspect` | 容器详情 |
 | `portainer/stats` | 单次资源采样 |

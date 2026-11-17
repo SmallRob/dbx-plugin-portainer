@@ -1,5 +1,14 @@
 # 更新日志
 
+## 0.2.3
+
+- 修复工作台打开或插件进程重建后 `Portainer connection is not established` 错误：启动时通过宿主 `host.reopenConnection` 重新建立 sidecar 会话
+- Kubernetes 环境新增专属 namespace 筛选器，可一次查看全部命名空间或只看指定 namespace 的 Pod 内容器
+- Kubernetes 视图改为显示 namespace / Pod 内容器，列表、徽章和统计文案不再沿用 Docker 堆栈语义
+- 新增 `portainer/namespaces` 方法；`portainer/containers`、`portainer/stacks`、`portainer/databases` 支持 `namespace` 参数
+- Kubernetes 日志新增「上一轮容器日志」开关，便于排查 CrashLoopBackOff / OOMKilled 等重启问题；没有上一轮实例时返回友好提示而不是 HTTP 400
+- 数据库连接面板在 Kubernetes 环境下显示 Namespace 而非 Stack
+
 ## 0.2.1
 
 - 新增 Kubernetes 环境支持：Portainer 的 Docker 与 Kubernetes（`Type=5`）端点现在自动识别，分别调用对应的只读 API

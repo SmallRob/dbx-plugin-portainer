@@ -3,7 +3,7 @@
   "manifest_version": 1,
   "id": "io.github.summery-yk.portainer",
   "name": "Portainer",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "publisher": "summery-yk",
   "description": "Browse Docker and Kubernetes Portainer environments, database containers and container logs from DBX.",
   "icon": "assets/plugin.svg",

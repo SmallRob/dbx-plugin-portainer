@@ -7,7 +7,7 @@
   "source": "https://github.com/summery-yk/dbx-plugin-portainer",
   "homepage": "https://github.com/summery-yk/dbx-plugin-portainer",
   "license": "Apache-2.0",
-  "releaseNotes": "Adds Kubernetes environment support: browse CCE/kubeadm/k3s Portainer clusters by namespace, read Pod container logs and details, discover database services, and sample metrics via the Kubernetes metrics API. Docker environments and all existing MCP tools keep working.",
+  "releaseNotes": "Adds Kubernetes environment support with a namespace filter and previous-container logs, reconnects the workbench session automatically, and keeps Docker environments and MCP tools working.",
   "localizations": {
     "zh-CN": {
       "name": "Portainer",
